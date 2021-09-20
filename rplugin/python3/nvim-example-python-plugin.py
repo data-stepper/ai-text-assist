@@ -6,15 +6,10 @@ class TestPlugin(object):
     def __init__(self, nvim):
         self.nvim = nvim
 
-    @neovim.function('TestFunction', sync=True)
-    def testfunction(self, args):
-        return 3
+    def _call_to_model(self, source_text: str) -> str:
+        pass
 
-    @neovim.command('TestCommand', nargs='*', range='')
+    @neovim.command('AiTextGen', nargs='*', range='')
     def testcommand(self, args, range):
         self.nvim.current.line = ('Command with args: {}, range: {}'
                                   .format(args, range))
-
-    @neovim.autocmd('BufEnter', pattern='*.py', eval='expand("<afile>")', sync=True)
-    def on_bufenter(self, filename):
-        self.nvim.out_write('testplugin is in ' + filename + '\n')
