@@ -10,6 +10,7 @@ class TestPlugin(object):
         pass
 
     @neovim.command('AiTextGen', nargs='*', range='')
-    def testcommand(self, args, range):
-        self.nvim.current.line = ('Command with args: {}, range: {}'
-                                  .format(args, range))
+    def testcommand(self, args, r):
+        
+        if r == [1, 1]:
+            self.nvim.command('echo "You need to visually select some text to use for text generation."')
