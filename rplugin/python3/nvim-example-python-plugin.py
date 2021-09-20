@@ -6,6 +6,6 @@ class Main(object):
         self.vim = vim
 
     @neovim.function('DoItPython', range=True)
-    def doItPython(self, args):
-        self.vim.command('echo "Received {}"'.format(args))
+    def doItPython(self, args, r):
+        self.vim.command('echo "Received {}"'.format(r))
 
