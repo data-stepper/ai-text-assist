@@ -1,6 +1,8 @@
 import neovim
 import subprocess
+import os
 
+TMPFILE_PATH = '/tmp/text_gen_tmp'
 
 @neovim.plugin
 class TestPlugin(object):
@@ -9,43 +11,63 @@ class TestPlugin(object):
     def __init__(self, nvim):
         self.nvim = nvim
 
+        self._spawn_daemon()
+
+
+    def _spawn_daemon(self):
+        
+        self.daemon = subprocess.Popen(
+            "~/miniconda3/envs/aitextgen/bin/python" +
+            " /home/bent/git/ai-text-assist/daemon.py",
+            shell=True,
+            text=True,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE
+        )
+
+
+    def _kill_daemon(self):
+        
+        out, _ = self.daemon.communicate('quit')
+        self.daemon.kill()
+
+
+    def _restart_daemon(self):
+        
+        self._kill_daemon()
+        self._spawn_daemon()
+
+
+    def _read_input_text(self):
+        
+        # Read from the temp file
+        with open(TMPFILE_PATH, "r") as f:
+            self.source_text = f.read()
+
+
+    def _write_generated_text(self, generated_text: str):
+
+        # First delete the file
+        assert os.system('rm {}'.format(TMPFILE_PATH)) == 0, "Error occurred overwriting the tempfile"
+        
+        # This will fail if an error occurs here
+        with open(TMPFILE_PATH, "w") as f:
+            bytes_written = f.write(generated_text)
+
+
 
     def _generate_text(self, source_text: str) -> str:
 
-        # cmd = [
-        #     "~/miniconda3/envs/aitextgen/bin/aitextgen",
-        #     "generate",
-        #     "--prompt",
-        #     "\"{}\"".format(source_text),
-        #     "--to_file",
-        #     "False",
-        #     "--n",
-        #     "1",
-        #     "--temperature","0.01","--max_length","50"
-        # ]
+        # Write source text to tempfile
+        self._write_generated_text(source_text)
 
-        cmd = ("~/miniconda3/envs/aitextgen/bin/aitextgen generate" +
-                " --prompt \"{}\"".format(source_text) +
-                " --to_file False --n 1 --temperature 0.01 --max_length 100 |" +
-                "sed -r \"s/\\x1B\[[0-9;]*[a-zA-Z]//g\"")
+        out, _ = self.daemon.communicate('generate\n')
 
-        # self.nvim.current.buffer[:] = cmd
-        # quit()
+        assert out.endswith('done\n'), "Error occurred communicating with daemon"
 
-        p = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self._read_input_text()
 
-        if p.returncode == 0:
-            # Everything went fine
-            produced_text = p.stdout
-            produced_text = bytes.decode(produced_text)
-            return produced_text
-
-        else:
-            # Some error occurred
-            err_message = bytes.decode(p.stderr)
-            self.send_message("An Error occurred trying to generate text:\n\n{}".format(err_message))
-
-            return source_text
+        return self.source_text
 
 
     def send_message(self, message: str):
