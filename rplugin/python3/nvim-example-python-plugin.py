@@ -114,7 +114,7 @@ class TestPlugin(object):
             self.nvim.current.buffer[self.start:self.end] = text_lines
 
 
-    @neovim.command("TextGen", nargs="*", range="")
+    @neovim.command("TextGenGenerate", nargs="*", range="")
     def testcommand(self, args, r):
 
         # Extract the visually selected text first
@@ -127,5 +127,13 @@ class TestPlugin(object):
         # Now paste it back in the buffer where it came from
 
         self.insert_text_into_buffer(selected_text, r)
+
+
+    @neovim.command("TextGenRestart")
+    def restart_plugin(self):
+        self._restart_daemon()
+        self.send_message('Daemon restarted')
+
+
 
 

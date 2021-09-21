@@ -16,6 +16,7 @@ import aitextgen
 
 TMPFILE_PATH = '/tmp/text_gen_tmp'
 
+
 class Daemon:
 
     def __init__(self, model_name: str = "EleutherAI/gpt-neo-1.3B"):
@@ -50,7 +51,7 @@ class Daemon:
         
         self._read_input_text()
 
-        self.generated_text = self.ai.generate_one(prompt=self.source_text, max_length=512)
+        self.generated_text = self.ai.generate_one(prompt=self.source_text, max_length=512, no_repeat_ngram_size=4)
 
         self._write_generated_text(self.generated_text)
 
