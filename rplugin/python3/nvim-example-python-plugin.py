@@ -1,4 +1,5 @@
 import neovim
+import subprocess
 
 
 @neovim.plugin
@@ -9,8 +10,42 @@ class TestPlugin(object):
         self.nvim = nvim
 
 
-    def _call_to_model(self, source_text: str) -> str:
-        pass
+    def _generate_text(self, source_text: str) -> str:
+
+        # cmd = [
+        #     "~/miniconda3/envs/aitextgen/bin/aitextgen",
+        #     "generate",
+        #     "--prompt",
+        #     "\"{}\"".format(source_text),
+        #     "--to_file",
+        #     "False",
+        #     "--n",
+        #     "1",
+        #     "--temperature","0.01","--max_length","50"
+        # ]
+
+        cmd = ("~/miniconda3/envs/aitextgen/bin/aitextgen generate" +
+                " --prompt \"{}\"".format(source_text) +
+                " --to_file False --n 1 --temperature 0.01 --max_length 100 |" +
+                "sed -r \"s/\\x1B\[[0-9;]*[a-zA-Z]//g\"")
+
+        # self.nvim.current.buffer[:] = cmd
+        # quit()
+
+        p = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        if p.returncode == 0:
+            # Everything went fine
+            produced_text = p.stdout
+            produced_text = bytes.decode(produced_text)
+            return produced_text
+
+        else:
+            # Some error occurred
+            err_message = bytes.decode(p.stderr)
+            self.send_message("An Error occurred trying to generate text:\n\n{}".format(err_message))
+
+            return source_text
 
 
     def send_message(self, message: str):
@@ -40,6 +75,7 @@ class TestPlugin(object):
 
         return text
 
+
     def insert_text_into_buffer(self, text: str, r):
 
         # Split text back into list of lines
@@ -55,6 +91,7 @@ class TestPlugin(object):
             # Paste the text lines into the selection area
             self.nvim.current.buffer[self.start:self.end] = text_lines
 
+
     @neovim.command("TextGen", nargs="*", range="")
     def testcommand(self, args, r):
 
@@ -62,11 +99,7 @@ class TestPlugin(object):
         selected_text = self.extract_selected_text(r)
 
         # Emulate call to model for now
-        text_len = len(selected_text)
-
-        last_line = "This is the last line, your text contains {} characters, range {}".format(text_len, r)
-
-        selected_text += '\n' + last_line
+        selected_text = self._generate_text(selected_text)
 
         # Prepared some text
         # Now paste it back in the buffer where it came from
