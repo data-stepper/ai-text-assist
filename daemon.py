@@ -19,7 +19,7 @@ TMPFILE_PATH = '/tmp/text_gen_tmp'
 
 class Daemon:
 
-    def __init__(self, model_name: str = "EleutherAI/gpt-neo-1.3B"):
+    def __init__(self, model_name: str = "EleutherAI/gpt-neo-2.7B"):
 
         self.model_name = model_name
         self._load_model()
@@ -77,6 +77,9 @@ class Daemon:
     def _load_model(self):
 
         self.ai = aitextgen.aitextgen(model=self.model_name)
+
+        # The bigger model needs to be in fp16 because of GPU memory capacities
+        self.ai.to_fp16()
 
         # Load the model onto gpu for speed up
         self.ai.to_gpu()

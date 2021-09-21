@@ -20,7 +20,8 @@ class TestPlugin(object):
         self.daemon = pexpect.spawn(
             "/home/bent/miniconda3/envs/aitextgen/bin/python" +
             " /home/bent/git/ai-text-assist/daemon.py",
-            encoding='utf-8'
+            encoding='utf-8',
+            timeout=120
         )
 
 
