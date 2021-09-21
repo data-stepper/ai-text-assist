@@ -1,6 +1,7 @@
 import neovim
 import subprocess
 import os
+import pexpect
 
 TMPFILE_PATH = '/tmp/text_gen_tmp'
 
@@ -15,21 +16,17 @@ class TestPlugin(object):
 
 
     def _spawn_daemon(self):
-        
-        self.daemon = subprocess.Popen(
-            "~/miniconda3/envs/aitextgen/bin/python" +
+
+        self.daemon = pexpect.spawn(
+            "/home/bent/miniconda3/envs/aitextgen/bin/python" +
             " /home/bent/git/ai-text-assist/daemon.py",
-            shell=True,
-            text=True,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE
+            encoding='utf-8'
         )
 
 
     def _kill_daemon(self):
-        
-        out, _ = self.daemon.communicate('quit')
-        self.daemon.kill()
+
+        self.daemon.sendline('quit')
 
 
     def _restart_daemon(self):
@@ -61,9 +58,8 @@ class TestPlugin(object):
         # Write source text to tempfile
         self._write_generated_text(source_text)
 
-        out, _ = self.daemon.communicate('generate\n')
-
-        assert out.endswith('done\n'), "Error occurred communicating with daemon"
+        self.daemon.sendline('generate')
+        self.daemon.expect('done')
 
         self._read_input_text()
 
