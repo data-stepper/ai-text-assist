@@ -28,6 +28,7 @@ class TextGenPlugin(object):
     def __init__(self, nvim):
         self.nvim = nvim
 
+        self.token_length = 512
         self._spawn_daemon()
 
 
@@ -77,7 +78,7 @@ class TextGenPlugin(object):
         # Write source text to tempfile
         self._write_to_tempfile(source_text)
 
-        self.daemon.sendline('generate')
+        self.daemon.sendline('generate {}'.format(self.token_length))
         self.daemon.expect('done', timeout=1200)
 
         self._read_from_tempfile()
@@ -155,3 +156,13 @@ class TextGenPlugin(object):
         self._kill_daemon()
         self.send_message('Killed daemon process')
 
+    @neovim.command("TextGenChangeTokenLength", nargs=1)
+    def change_token_length(self, token_length):
+
+        token_length = int(token_length)
+
+        if not 0 < token_length <= 2048:
+            self.send_message("Error: token length must be between 1 and 2048, given {}".format(token_length))
+
+        else:
+            self.token_length = token_length

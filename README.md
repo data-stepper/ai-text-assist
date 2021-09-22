@@ -1,227 +1,250 @@
-# Example Neovim Python Plugin
+# Text Gen Neovim Plugin
 
-- [Introduction](#introduction)
-- [Installing](#installing)
-    - [Downloading](#downloading)
-    - [Configuring Vim](#configuring-vim)
-    - [Python Version](#python_version)
-    - [Initializing Vim with Remote Plugin](#initializing)
-    - [Testing the New Plugin](#testing)
-- [Development](#development)
-    - [Debugging](#debugging)
-    - [Plugin Interface Changes](#changing-interface)
-- [Troubleshooting](#troubleshooting)
-    - [Refreshing the Manifest File](#refreshing-manifest)
-    - [Python Client Log File](#client-log-file)
-    - [Neovim Log File](#neovim-log-file)
-    - [Neovim Library](#neovim-library)
-- [References](#references)
+A neovim plugin that enables instant text generation inside neovim. 
 
-## <a id="introduction"></a>Introduction
+## Installation
 
-As part of the changes included in Neovim there is a new plugin model where
-plugins are separate processes which Neovim communicates to using the
-MessagePack protocol.
+If you are using vim-plug, add the following to your vimrc:
 
-Since plugins are distinct from the Neovim process, it is possible to write
-plugins in many languages.
-
-This is a minimal example of a Python plugin. When you want to create a new
-Python plugin, you should be able to (and feel free to) copy this repository,
-rename a couple files, include the plugin in your Vim config and see something
-happen.
-
-## <a id="installing"></a>Installing
-
-### <a id="downloading"></a>Downloading
-
-The intention of this repository is to make it quick and easy to start a new
-plugin. It is just enough to show how to make the basics work.
-
-```Bash
-git clone --depth 1 https://github.com/jacobsimpson/nvim-example-python-plugin ~/.vim/bundle/nvim-example-python-plugin
-rm -Rf ~/.vim/bundle/nvim-example-python-plugin/.git
+```
+Plug 'data-stepper/ai-text-gen'
 ```
 
-### <a id="configuring-vim"></a>Configuring Vim
+## Requirements
 
-I use NeoBundle so this is an example of how to load this plugin in NeoBundle.
+You need the python module aitextgen in order for the plugin to work as it uses their language models.
 
-```VimL
-" Required:
-call neobundle#begin(expand('~/.vim/bundle/'))
+## Usage
 
-    " Let NeoBundle manage NeoBundle
-    " Required:
-    NeoBundleFetch 'Shougo/neobundle.vim'
+Select some text in visual mode, hit <C-g> and the plugin will feed the selected text to the text generation model to generate the rest of the text.
 
-    " You probably have a number of other plugins listed here.
+## TODO List
 
-    " Add this line to make your new plugin load, assuming you haven't renamed it.
-    NeoBundle 'nvim-example-python-plugin'
-call neobundle#end()
+- [ ] Plugin only works when neovim is started in a directory that already downloaded the aitextgen models
+- [ ] Should support variable text length when generating text, or a command to change text length.
+- [x] Plugin should be able to generate text with variable length.
+
+### Text Generation Using Textgen
+
+A textgen plugin looks like this:
+
+| Plugin | Description     |
+| ---- | ------------ |
+| aitext | Textgen language model.  |
+
+In its most basic form, textgen generates text using the following code:
+
+* [Textgen](https://github.com/ai-te/ai-tex)
+
+```.py
+import textgen
+
+textgen.set_text_to_generate(text)
 ```
 
-If you use vim-plug, you can add this line to your plugin section:
 
-```VimL
-Plug 'jacobsimpson/nvim-example-python-plugin'
-```
+### Textgen Language Model
 
-After running `:PlugInstall`, the files should appear in your `~/.config/nvim/plugged` directory (or whatever path you have configured for plugins).
+A language model for textgen is installed in the `ai-tex` directory. This is a Python module that supports the following two language models:
 
-### <a id="python_version"></a>Python Version
+#### Textgen
+* [gensim](http://nlp.seas.harvard.edu/gensim/)
+* [aitext](http://aitext.com/)
 
-This plugin code works with Python 2. You can make it work with Python 3 by changing the `rplugin/python` directory to be `rplugin/python3`. See the [python-client remote plugin documentation](https://github.com/neovim/python-client#remote-new-style-plugins) for more information.
+This model uses the [gensir](http://gensir.readthedocs.io/) library to generate the text. 
+ 
+The plugin uses the following code to generate the sentence for the word [`cat`]:
 
-### <a id="initializing"></a>Initializing Vim with Remote Plugin
+```, python
+import textnet
+import textgens
+import text
 
-The next thing to do is to initialize the manifest for the Python part of the
-plugin. The manifest is a cache that Vim keeps of the interface implemented by
-the Python part of the plugin. The functions and commands it implements.
+class Textgen(textgens.Textgen):
+    """
+  
+   Generate `text`
+   """
 
-To initialize the manifest, execute:
+    def __call__(self, text):
+ 		text = text.replace('cat', 'CAT')
+ 	return text
 
-```VimL
-:UpdateRemotePlugins
-```
 
-**NOTE:** After initializing the manifest, you must restart neovim for the python
-functions be be available.
+# Load the model
+model = textgens.load_model_from_path(textgins.ext_path(aitextgen.aitext), aitext)
 
-### <a id="testing"></a>Testing the New Plugin
+# Generate some text
+textgen = Textgen(model)
+textgen('This is a sentence that has many words in it.')
+textgens = Textgen()
+textggen = Textgens()
 
-There is some VimL in the plugin that will print when Neovim is starting up:
+# Run the textgen model on the text
+textgensequence = textgen.run("This is a sentences with many words in them")
 
-    Starting the example Python Plugin
+# Print the sentence
+print(textgenseqence)
 
-That will confirm that the VimL portions of the plugin are loading correctly.
 
-There is a function defined in the VimL portion of the plugin which echos some
-text. You can execute the function like this:
+## Configuration
 
-```VimL
-:exec DoItVimL()
-```
+The plugin supports configuration by passing in the following keyword arguments:
 
-Now that the manifest is initialized, it should be possible to invoke the
-function defined in the Python part of the plugin. Look in \_\_init\_\_ to see
-the implementation.
+- `textgen_model` The name of the model to use to generate the selected text.
+- `file` The file name of the text to generate.
+- ```
+  textgen_model_dir = 'ai-tex/'
+  text_file = 'textgen.py'
+  ```
 
-```VimL
-:exec DoItPython()
-```
+The following example shows how to pass in the `textgen` parameter and use `ai-te` as the textgen language model:
 
-## <a id="development"></a>Development
+## Example
 
-On it's own, this plugin doesn't do anything interesting, so the expectation is
-that you will want to modify it.
+``
+$ vim.vim/ftplugin/textgen/textgen.vim
+set fileformat=neovim
+set neovim
 
-### <a id="debugging"></a>Debugging
+set neomakeprg=textgen#textgen
+set textgen_parser=textgen:textgen
 
-In order to take advantage of the Python REPL and make it easier to test changes in your Python code, I usually take the following steps:
+set text_font=monospace
+set textgens=textgens#textgens
+set textgin_parser=aitext
 
-1. Open a Neovim instance.
-2. Open a terminal inside Neovim. (:term)
-3. Start the Python, or IPython, interpreter in the Neovim terminal. (python, ipython)
-4. Execute this code in the Python interpreter:
-```Python
-import neovim
-import os
+set lhs=\%{l} \%{r}
+set rhs=\%r
+set rhs=\r
+set lst=\%l \%r
 
-nvim = neovim.attach('socket', path=os.environ['NVIM_LISTEN_ADDRESS'])
-```
+set first=\s\+
+set last=\s \+
+set text=\%{\%s\%}
+set content=\%c \%{lhs}
+set last_text=\%p \%{last}
+set lbl=\%b \%b
+set rbl=\r\%b
 
-At this point, you can either execute commands directly against Neovim, to test the behavior of the interface:
+set lastline
+set lastword
+set lastchar
+set lpar=\%a \%p
+set rpar=\r \%a
+set lhsp=\%# \%rsp
+set rhsp=\r# \%#
 
-```Python
-nvim.current.buffer.name
-```
+set lines=\%n
+set words=\%w
+set chars=\%x
+set caps=\%X
 
-or load your own plugin class and work with it directly.
+set c_e_mode=1
+set ctrl=\%v
+set v_e_mod=1
 
-```Python
-%run "rplugin/python/nvim-example-python-plugin.py"
-m = Main(nvim)
-m.doItPython([])
-```
+set vim_insertmode=1	# Disable insert mode
 
-### <a id="changing-interface"></a>Plugin Interface Changes
+set autoindent
+set textwidth=100
+set linewidth=100
 
-Neovim includes a step where the interface of the remote plugin is cached for
-Neovim, so that Neovim knows what functions and commands your plugin is making
-available without having to wait while the external process containing the
-plugin is started.
+set g_autowrite=1
+``` 
 
-```VimL
-:UpdateRemotePlugins
-```
+This example shows how the textgen plugin can be configured to generate text in neovim using the aitex language model.
 
-Run this command for *every* change in the plugin interface. Without this, you
-may see errors on from Neovim telling you methods are missing from your plugin.
-Or the new functionality you are trying to add just won't work.
+`` 
+# Create a new file to generate the word 'CAT'
+vue-textgen-new-file-with-textgen()
 
-## <a id="troubleshooting"></a>Troubleshooting
+textgenname = 'ai_tex'
 
-### <a id="refreshing-manifest"></a>Refreshing the Manifest File
+# Set the aiteXT model to use
+aitext_model = 'aitext'
 
-For each change to the interface of the Python plugin, that is to say, any
-alterations to the @neovim decorators, you need to update Neovim's manifest
-file:
+text_toGenerate = 'This is a text that uses a textgen plugin.
 
-```VimL
-:UpdateRemotePlugins
-```
+# The text to generate is in the current file
+file = 'test_textgen.txt'
 
-Restart Neovim after you update to make the changes take effect.
+file_content = 'This line of text uses neovim text generation.'
 
-If there is a syntax error in the Python file, it may result in the plugin not
-loading. There may be no visible error. If you run the update command, and the
-commands and functions defined in the remote plugin are not available, the next
-useful troubleshooting step is to load your plugin directly in a Python
-interpreter to see if it works.
+# Add the aiteX text model to the text
+aitex_text = 'aX'
 
-### <a id="client-log-file"></a>Python Client Log File
+aitexparser = textgenname + aitext_ model + '_parser.py'
 
-Define this environment variable to get output logged from your Python client.
 
-```Bash
-export NVIM_PYTHON_LOG_FILE=${HOME}/.nvim-python.log
-```
+# Run this plugin
+vuetextgen()
 
-The output files will have a number appended, and should be visible with this:
 
-```Bash
-ls ${HOME}/.nvim-python.log*
-```
+# Save the file
+file_save = 'test.txt'
 
-### <a id="neovim-log-file"></a>Neovim Log File
 
-```Bash
-ls ~/.nvimlog
-```
+vue_open('test.txt')
+```		
 
-### <a id="neovim-library"></a>Neovim Library
 
-One problem I encountered when I was first getting started was the Python
-neovim module was not installed on my system. I didn't see any great errors
-that lead me to that conclusion, so it is worth checking:
+## Command-line Usage
 
-```Bash
-python -c "import neovim"
-```
+To use the plugin with the command line, add the `text` keyword argument to the `textgens` function to pass in a text string:
 
-Should execute without an error.
+### Example
 
-## <a id="references"></a>References
-- [Neovim Remote Plugin Documentation](http://neovim.io/doc/user/remote_plugin.html)
+This command-line example shows how `textgennamed` can be used to pass in text to generate:
 
-The Neovim docs for remote plugins. It's a little sparse, but captures the core
-detail.
+`$ vim.vue/ftplugin/.vue/textgen/.vim/textgens/textgennames.vim`
 
-- [Neovim Python Client](https://github.com/neovim/python-client)
+``	
+set text="This is a test with a textgen text.
+This is another test with a different textgen text."
 
-The Neovim Python client is the Python API that wraps the MessagePack protocol
-Neovim uses to communicate with remote plugins. If you are looking for more
-information on how to use the vim parameter to the main object to control
-Neovim, this is the place to go.
+text1 = vim.eval('textgennamestring(text)')
+
+set content="This is another line of text.
+And this is a third line of text."
+
+
+set content1="This is the third line of the text."
+```**
+
+The first argument is the text to be generated, the second is the string to use in the textgen.
+
+The `vim` module evaluates the text in the text to use as the text to pass to the textgen to generate the appropriate text.
+The `textgend` function is passed the text to evaluate and create the textgen object.
+
+`textgennamer` returns the text generated using the textgen, `textgeng` returns the object that contains the textgen method.
+
+To rerun the textgen on the text, use the `vim` `eval` function, passing in the text as the text argument:
+
+> `vim.vue/.vue/.vim/vim.vim`: `vim.eval('vim.eval("vim.eval(":textgennamename.text)")')`
+
+This will evaluate the text to create the text generator, and then run the textgen using the text as input.
+
+If the text argument was empty, the textgen will be run using the default text.
+If the first argument is empty, the first word will be used.
+If there are multiple words, the text will be run on all words.
+
+> [vim.eval()](http://vimdoc.sourceforge.net/htmldoc/eval.html)
+
+## Versioning
+
+The textgen plugin has been tested with the version 3.0.1 of aitext, and should not be changed or updated.
+
+| | | | |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| |    Last Updated    ||    **Description**   				| |
+|------------------------------------------------|------------------------------------------|
+| | 2014-05-20||Aitext language model.			    <<<|
+|-------------------------------------------------|------------------------------------------|
+
+
+## Copyright
+
+Copyright (c) 2014-2015 [Data Science](http://datascience.org/)
+
+Copyright 2015-2017 [David R.

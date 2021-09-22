@@ -26,6 +26,7 @@ class Daemon:
 
         self.model_name = model_name
         self._load_model()
+        self.token_length = 1024
 
 
     def _read_input_text(self):
@@ -57,7 +58,11 @@ class Daemon:
         
         self._read_input_text()
 
-        self.generated_text = self.ai.generate_one(prompt=self.source_text, max_length=2048, no_repeat_ngram_size=4)
+        self.generated_text = self.ai.generate_one(
+            prompt=self.source_text,
+            max_length=self.token_length,
+            no_repeat_ngram_size=4
+        )
 
         self._write_generated_text(self.generated_text)
 
@@ -68,6 +73,19 @@ class Daemon:
         for line in sys.stdin:
             
             if line.startswith('generate'):
+                # Find how many tokens to generate
+                n = str.replace(line, 'generate ', '')
+                
+                if n[-1] in '\n\r':
+                    n = n[:-1]
+
+                # Now parse the number of tokens
+                try:
+                    self.token_length = int(n)
+
+                except:
+                    pass
+
                 # Generate some text
                 self.generate_text()
 
