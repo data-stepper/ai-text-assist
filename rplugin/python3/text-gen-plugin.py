@@ -1,12 +1,28 @@
+# -*- coding: utf-8 -*-
+"""
+    bent.text-gen-plugin
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    Neovim remote plugin python part.
+    Handles communication with the daemon, gathers text
+    from neovim and pushes generated text to the source buffer.
+
+    :copyright: (c) 2021 by Bent Mueller.
+    :license: MIT, see LICENSE for more details.
+"""
+
+
 import neovim
 import subprocess
 import os
 import pexpect
 
-TMPFILE_PATH = '/tmp/text_gen_tmp'
+
+TEMPFILE = '/tmp/text_gen_tmp'
+
 
 @neovim.plugin
-class TestPlugin(object):
+class TextGenPlugin(object):
 
 
     def __init__(self, nvim):
@@ -21,7 +37,7 @@ class TestPlugin(object):
             "/home/bent/miniconda3/envs/aitextgen/bin/python" +
             " /home/bent/git/ai-text-assist/daemon.py",
             encoding='utf-8',
-            timeout=120
+            timeout=1200
         )
 
 
@@ -36,33 +52,35 @@ class TestPlugin(object):
         self._spawn_daemon()
 
 
-    def _read_input_text(self):
+    def _read_from_tempfile(self):
         
         # Read from the temp file
-        with open(TMPFILE_PATH, "r") as f:
+        with open(TEMPFILE, "r") as f:
             self.source_text = f.read()
 
 
-    def _write_generated_text(self, generated_text: str):
+    def _write_to_tempfile(self, generated_text: str):
+        try:
+            # First delete the file
+            assert os.system('rm {}'.format(TEMPFILE)) == 0, "Error occurred overwriting the tempfile"
 
-        # First delete the file
-        assert os.system('rm {}'.format(TMPFILE_PATH)) == 0, "Error occurred overwriting the tempfile"
+        except:
+            pass
         
         # This will fail if an error occurs here
-        with open(TMPFILE_PATH, "w") as f:
+        with open(TEMPFILE, "w") as f:
             bytes_written = f.write(generated_text)
-
 
 
     def _generate_text(self, source_text: str) -> str:
 
         # Write source text to tempfile
-        self._write_generated_text(source_text)
+        self._write_to_tempfile(source_text)
 
         self.daemon.sendline('generate')
-        self.daemon.expect('done')
+        self.daemon.expect('done', timeout=1200)
 
-        self._read_input_text()
+        self._read_from_tempfile()
 
         return self.source_text
 
@@ -132,5 +150,8 @@ class TestPlugin(object):
         self.send_message('Daemon restarted')
 
 
-
+    @neovim.command("TextGenQuit")
+    def quit_plugin(self):
+        self._kill_daemon()
+        self.send_message('Killed daemon process')
 

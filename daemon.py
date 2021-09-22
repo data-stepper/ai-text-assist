@@ -14,10 +14,13 @@ import sys
 import os
 import aitextgen
 
-TMPFILE_PATH = '/tmp/text_gen_tmp'
+
+TEMPFILE = '/tmp/text_gen_tmp'
 
 
 class Daemon:
+
+    """Daemon class"""
 
     def __init__(self, model_name: str = "EleutherAI/gpt-neo-2.7B"):
 
@@ -26,10 +29,11 @@ class Daemon:
 
 
     def _read_input_text(self):
+        """Reads text from the tempfile and stores it in self.source_text."""
         
         # Read from the temp file
         try:
-            with open(TMPFILE_PATH, "r") as f:
+            with open(TEMPFILE, "r") as f:
                 self.source_text = f.read()
 
         except:
@@ -38,25 +42,28 @@ class Daemon:
 
 
     def _write_generated_text(self, generated_text: str):
+        """Deletes tempfile and writes text to the it."""
 
         # First delete the file
-        assert os.system('rm {}'.format(TMPFILE_PATH)) == 0, "Error occurred overwriting the tempfile"
+        assert os.system('rm {}'.format(TEMPFILE)) == 0, "Error occurred overwriting the tempfile"
         
         # This will fail if an error occurs here
-        with open(TMPFILE_PATH, "w") as f:
+        with open(TEMPFILE, "w") as f:
             bytes_written = f.write(generated_text)
 
 
     def generate_text(self):
+        """Handles entire text generation process."""
         
         self._read_input_text()
 
-        self.generated_text = self.ai.generate_one(prompt=self.source_text, max_length=512, no_repeat_ngram_size=4)
+        self.generated_text = self.ai.generate_one(prompt=self.source_text, max_length=2048, no_repeat_ngram_size=4)
 
         self._write_generated_text(self.generated_text)
 
     
     def listen_to_input(self):
+        """Listens on stdin for input so it knows when to generate new text."""
 
         for line in sys.stdin:
             
@@ -75,6 +82,7 @@ class Daemon:
 
 
     def _load_model(self):
+        """Loads the model from file."""
 
         self.ai = aitextgen.aitextgen(model=self.model_name)
 
@@ -86,6 +94,7 @@ class Daemon:
 
 
 def main():
+    """Main function in daemon."""
     
     d = Daemon()
     d.listen_to_input()
