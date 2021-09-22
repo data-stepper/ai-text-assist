@@ -159,7 +159,7 @@ class TextGenPlugin(object):
     @neovim.command("TextGenChangeTokenLength", nargs=1)
     def change_token_length(self, token_length):
 
-        token_length = int(token_length)
+        token_length = int(token_length[-1])
 
         if not 0 < token_length <= 2048:
             self.send_message("Error: token length must be between 1 and 2048, given {}".format(token_length))
