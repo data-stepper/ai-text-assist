@@ -15,6 +15,7 @@
 import neovim
 import subprocess
 import os
+from os.path import expanduser
 import pexpect
 
 
@@ -35,8 +36,10 @@ class TextGenPlugin(object):
     def _spawn_daemon(self):
 
         self.daemon = pexpect.spawn(
-            "/home/bent/miniconda3/envs/aitextgen/bin/python" +
-            " /home/bent/git/ai-text-assist/daemon.py",
+            expanduser("~/miniconda3/envs/aitextgen/bin/python") +
+            " " + 
+            expanduser("~/.config/nvim/plugged/ai-text-assist/daemon.py"),
+            cwd=expanduser('~'),
             encoding='utf-8',
             timeout=1200
         )
