@@ -62,6 +62,7 @@ class Daemon:
             max_length=self.token_length,
             no_repeat_ngram_size=4,
             do_sample=False,
+            early_stopping=True,
         )
 
         self._write_generated_text(self.generated_text)
