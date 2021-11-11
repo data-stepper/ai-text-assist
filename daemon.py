@@ -15,7 +15,7 @@ import os
 import aitextgen
 
 
-TEMPFILE = '/tmp/text_gen_tmp'
+TEMPFILE = "/tmp/text_gen_tmp"
 
 
 class Daemon:
@@ -28,10 +28,9 @@ class Daemon:
         self._load_model()
         self.token_length = 1024
 
-
     def _read_input_text(self):
         """Reads text from the tempfile and stores it in self.source_text."""
-        
+
         # Read from the temp file
         try:
             with open(TEMPFILE, "r") as f:
@@ -41,42 +40,42 @@ class Daemon:
             # Failed to read text
             self.source_text = ""
 
-
     def _write_generated_text(self, generated_text: str):
         """Deletes tempfile and writes text to the it."""
 
         # First delete the file
-        assert os.system('rm {}'.format(TEMPFILE)) == 0, "Error occurred overwriting the tempfile"
-        
+        assert (
+            os.system("rm {}".format(TEMPFILE)) == 0
+        ), "Error occurred overwriting the tempfile"
+
         # This will fail if an error occurs here
         with open(TEMPFILE, "w") as f:
             bytes_written = f.write(generated_text)
 
-
     def generate_text(self):
         """Handles entire text generation process."""
-        
+
         self._read_input_text()
 
         self.generated_text = self.ai.generate_one(
             prompt=self.source_text,
             max_length=self.token_length,
-            no_repeat_ngram_size=4
+            no_repeat_ngram_size=4,
+            do_sample=False,
         )
 
         self._write_generated_text(self.generated_text)
 
-    
     def listen_to_input(self):
         """Listens on stdin for input so it knows when to generate new text."""
 
         for line in sys.stdin:
-            
-            if line.startswith('generate'):
+
+            if line.startswith("generate"):
                 # Find how many tokens to generate
-                n = str.replace(line, 'generate ', '')
-                
-                if n[-1] in '\n\r':
+                n = str.replace(line, "generate ", "")
+
+                if n[-1] in "\n\r":
                     n = n[:-1]
 
                 # Now parse the number of tokens
@@ -92,12 +91,11 @@ class Daemon:
                 # After generating text respond on stdout
                 print("done")
 
-            elif line.startswith('quit'):
+            elif line.startswith("quit"):
                 # Quit the daemon
 
                 del self.ai
                 exit(0)
-
 
     def _load_model(self):
         """Loads the model from file."""
@@ -113,12 +111,10 @@ class Daemon:
 
 def main():
     """Main function in daemon."""
-    
+
     d = Daemon()
     d.listen_to_input()
 
 
 if __name__ == "__main__":
     main()
-
-
