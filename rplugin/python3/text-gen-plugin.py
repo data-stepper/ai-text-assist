@@ -12,88 +12,99 @@
 """
 
 
-import neovim
-import subprocess
+import logging
 import os
 from os.path import expanduser
+import subprocess
+
+import json
+import neovim
+import openai
 import pexpect
 
 
-TEMPFILE = '/tmp/text_gen_tmp'
+# Load the API key
+API_KEY = os.getenv("OPENAI_API_KEY")
+openai.api_key = API_KEY
+
+TEMPFILE = "/tmp/text_gen_tmp"
+LOGFILE = "/log/text_generation.log"
+STATE_FILE = "/log/text_generation_plugin_state_file.json"
+logging.basicConfig(level=logging.DEBUG, filename=LOGFILE)
+
+
+model_ids = {
+    "1": "text-davinci-002",
+    "2": "text-curie-001",
+    "3": "text-babbage-001",
+    "4": "text-ada-001",
+}
+
+
+# Pricing is calculated per 1k tokens in USD
+models_pricing = {
+    "text-davinci-002": 0.06,
+    "text-curie-001": 0.006,
+    "text-babbage-001": 0.0012,
+    "text-ada-001": 0.0008,
+}
 
 
 @neovim.plugin
 class TextGenPlugin(object):
 
+    """Plugin to communicate with OpenAI's GPT-3 API."""
 
     def __init__(self, nvim):
         self.nvim = nvim
 
-        self.token_length = 512
-        self._spawn_daemon()
+        self.constant_kwargs = {
+            "echo": True,
+            "top_p": 1.0,
+            "frequency_penalty": 0.0,
+            "presence_penalty": 0.0,
+        }
 
+    def _load_state_file(self):
 
-    def _spawn_daemon(self):
-
-        self.daemon = pexpect.spawn(
-            expanduser("~/miniconda3/envs/aitextgen/bin/python") +
-            " " + 
-            expanduser("~/.config/nvim/plugged/ai-text-assist/daemon.py"),
-            cwd=expanduser('~'),
-            encoding='utf-8',
-            timeout=1200
-        )
-
-
-    def _kill_daemon(self):
-
-        self.daemon.sendline('quit')
-
-
-    def _restart_daemon(self):
-        
-        self._kill_daemon()
-        self._spawn_daemon()
-
-
-    def _read_from_tempfile(self):
-        
-        # Read from the temp file
-        with open(TEMPFILE, "r") as f:
-            self.source_text = f.read()
-
-
-    def _write_to_tempfile(self, generated_text: str):
         try:
-            # First delete the file
-            assert os.system('rm {}'.format(TEMPFILE)) == 0, "Error occurred overwriting the tempfile"
+
+            with open(STATE_FILE, "rw") as fp:
+
+                self.state = json.load(fp)
 
         except:
-            pass
-        
-        # This will fail if an error occurs here
-        with open(TEMPFILE, "w") as f:
-            bytes_written = f.write(generated_text)
 
+            # Create state file if it doesn't exist
+            self.state = {
+                "total_tokens_requested": {
+                    "text-davinci-002": 0,
+                    "text-curie-001": 0,
+                    "text-babbage-001": 0,
+                    "text-ada-001": 0,
+                },
+                "max_tokens": 256,
+                "temperature": 0.0,
+                "engine_id": "text-curie-001",
+                "total_spending_usd": 0.0,
+            }
+
+            # And then save the state to the file
+
+    def _send_api_request(self, prompt_text: str) -> str:
+        pass
 
     def _generate_text(self, source_text: str) -> str:
 
-        # Write source text to tempfile
-        self._write_to_tempfile(source_text)
-
-        self.daemon.sendline('generate {}'.format(self.token_length))
-        self.daemon.expect('done', timeout=1200)
+        self.daemon.sendline("generate {}".format(self.max_tokens))
+        self.daemon.expect("done", timeout=1200)
 
         self._read_from_tempfile()
 
         return self.source_text
 
-
-    def send_message(self, message: str):
-        self.nvim.command(
-            'echo "{}\n\n"'.format(message)
-        )
-
+    def send_message_to_user(self, message: str):
+        self.nvim.command('echo "{}\n\n"'.format(message))
 
     def extract_selected_text(self, r):
 
@@ -101,40 +112,38 @@ class TextGenPlugin(object):
 
         self.start, self.end = r
         self.start -= 1
-    
+
         if self.start == self.end:
             # Nothing selected or just one line
             text = self.nvim.current.buffer[self.start]
-            text += '\n'
+            text += "\n"
 
         else:
 
             # Otherwise extract region
-            lines_of_text = self.nvim.current.buffer[self.start:self.end]
-            
-            text = '\n'.join(lines_of_text)
+            lines_of_text = self.nvim.current.buffer[self.start : self.end]
+
+            text = "\n".join(lines_of_text)
 
         return text
-
 
     def insert_text_into_buffer(self, text: str, r):
 
         # Split text back into list of lines
-        text_lines = text.split('\n')
+        text_lines = text.split("\n")
 
         if self.start == self.end:
 
             # If there was no visual selection, just paste the text into the current line
-            self.nvim.current.buffer[self.start:self.start] = text_lines
+            self.nvim.current.buffer[self.start : self.start] = text_lines
 
         else:
 
             # Paste the text lines into the selection area
-            self.nvim.current.buffer[self.start:self.end] = text_lines
-
+            self.nvim.current.buffer[self.start : self.end] = text_lines
 
     @neovim.command("TextGenGenerate", nargs="*", range="")
-    def testcommand(self, args, r):
+    def command_generate_text(self, args, r):
 
         # Extract the visually selected text first
         selected_text = self.extract_selected_text(r)
@@ -147,25 +156,26 @@ class TextGenPlugin(object):
 
         self.insert_text_into_buffer(selected_text, r)
 
-
     @neovim.command("TextGenRestart")
     def restart_plugin(self):
         self._restart_daemon()
-        self.send_message('Daemon restarted')
-
+        self.send_message_to_user("Daemon restarted")
 
     @neovim.command("TextGenQuit")
     def quit_plugin(self):
         self._kill_daemon()
-        self.send_message('Killed daemon process')
+        self.send_message_to_user("Killed daemon process")
 
     @neovim.command("TextGenChangeTokenLength", nargs=1)
     def change_token_length(self, token_length):
 
         token_length = int(token_length[-1])
 
-        if not 0 < token_length <= 2048:
-            self.send_message("Error: token length must be between 1 and 2048, given {}".format(token_length))
+        if not 0 < token_length <= 4096:
+            self.send_message_to_user(
+                "Error: token length must be between 1 and 4096, given {}"
+                .format(token_length)
+            )
 
         else:
-            self.token_length = token_length
+            self.max_tokens = token_length
