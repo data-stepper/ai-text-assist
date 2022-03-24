@@ -41,6 +41,11 @@ model_ids = {
     "4": "text-ada-001",
 }
 
+# Prepare a choices string here
+models_choice_str = ""
+for k, v in model_ids.items():
+    models_choice_str += "{} --> {}\n".format(k, v)
+
 
 # Pricing is calculated per 1k tokens in USD
 models_pricing = {
@@ -101,6 +106,11 @@ class TextGenPlugin(object):
 
     def _send_api_request(self, prompt_text: str) -> str:
 
+        if not API_KEY:
+
+            self.send_message_to_user("Error: could not find API key")
+            return prompt_text
+
         try:
 
             response = openai.Completion.create(
@@ -108,28 +118,32 @@ class TextGenPlugin(object):
                 prompt=prompt_text,
                 temperature=self.state["temperature"],
                 max_tokens=self.state["max_tokens"],
-                echo=True,
-                top_p=1.0,
-                frequency_penalty=0.0,
-                presence_penalty=0.0,
+                **self.constant_kwargs,
             )
 
-            # Now parse the response back into the buffer
+            # Only return the text and write the raw response to the logfile
+            logging.debug(
+                "Received response from OpenAI API: \n{}".format(
+                    pformat(response)
+                )
+            )
+
+            return response["choices"][0]["text"]
 
         except Exception as ex:
 
             self.send_message_to_user(
-                "Error sending api request: {}".format(ex)
+                "Error occurred sending api request: {}".format(ex)
             )
 
     def _generate_text(self, source_text: str) -> str:
 
-        self.daemon.sendline("generate {}".format(self.max_tokens))
-        self.daemon.expect("done", timeout=1200)
+        # Ask the user first if he really wants to send the request
 
-        self._read_from_tempfile()
+        # Send the api request
+        response_text = self._send_api_request(source_text)
 
-        return self.source_text
+        return response_text
 
     def send_message_to_user(self, message: str):
         self.nvim.command('echo "{}\n\n"'.format(message))
@@ -206,4 +220,39 @@ class TextGenPlugin(object):
             )
 
         else:
+
             self.max_tokens = token_length
+            self._save_state_to_file()
+
+    @neovim.command("TextGenChangeModel", nargs=1)
+    def change_engine(self, token_length):
+
+        self.send_message_to_user(
+            "Changing text generation model to \n{}".format(models_choice_str)
+        )
+
+        r = self.nvim.input(
+            "Changing text generation model to \n{}".format(models_choice_str)
+        )
+
+        if r in model_ids.keys():
+            new_engine_id = model_ids[r]
+            self.send_message_to_user(
+                "Changing generation model to {}".format(new_engine_id)
+            )
+
+            self.state["engine_id"] = new_engine_id
+            self._save_state_to_file()
+
+        token_length = int(token_length[-1])
+
+        if not 0 < token_length <= 4096:
+            self.send_message_to_user(
+                "Error: token length must be between 1 and 4096, given {}"
+                .format(token_length)
+            )
+
+        else:
+
+            self.max_tokens = token_length
+            self._save_state_to_file()
