@@ -12,12 +12,13 @@
 """
 
 
+import json
 import logging
 import os
 from os.path import expanduser
+from pprint import pformat
 import subprocess
 
-import json
 import neovim
 import openai
 import pexpect
@@ -65,6 +66,12 @@ class TextGenPlugin(object):
             "presence_penalty": 0.0,
         }
 
+    def _save_state_to_file(self):
+
+        with open(STATE_FILE, "rw") as fp:
+
+            json.dump(self.state, fp)
+
     def _load_state_file(self):
 
         try:
@@ -90,9 +97,30 @@ class TextGenPlugin(object):
             }
 
             # And then save the state to the file
+            self._save_state_to_file()
 
     def _send_api_request(self, prompt_text: str) -> str:
-        pass
+
+        try:
+
+            response = openai.Completion.create(
+                engine=self.state["engine_id"],
+                prompt=prompt_text,
+                temperature=self.state["temperature"],
+                max_tokens=self.state["max_tokens"],
+                echo=True,
+                top_p=1.0,
+                frequency_penalty=0.0,
+                presence_penalty=0.0,
+            )
+
+            # Now parse the response back into the buffer
+
+        except Exception as ex:
+
+            self.send_message_to_user(
+                "Error sending api request: {}".format(ex)
+            )
 
     def _generate_text(self, source_text: str) -> str:
 
