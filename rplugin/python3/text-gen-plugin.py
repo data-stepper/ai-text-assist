@@ -72,12 +72,14 @@ class TextGenPlugin(object):
         }
 
     def _save_state_to_file(self):
+        """Save the state to the state file."""
 
         with open(STATE_FILE, "rw") as fp:
 
             json.dump(self.state, fp)
 
     def _load_state_file(self):
+        """Load the state from the state file."""
 
         try:
 
@@ -105,6 +107,11 @@ class TextGenPlugin(object):
             self._save_state_to_file()
 
     def _send_api_request(self, prompt_text: str) -> str:
+        """Send an API request to OpenAI's GPT-3 API.
+
+        Automatically logs API usage information and displays
+        it to the user.
+        """
 
         if not API_KEY:
 
@@ -113,6 +120,34 @@ class TextGenPlugin(object):
 
         try:
 
+            # Before really sending the API request, ask
+            # the user if he really wants to send the request
+            # and calculate an expected price for the request
+
+            # According to OpenAI ~750 tokens make up 1000 words
+            estimated_number_of_tokens = str.count(prompt_text, " ") / 750
+            estimated_cost_in_usd = (
+                estimated_number_of_tokens
+                * models_pricing[self.state["engine_id"]]
+            )
+
+            user_response = self.nvim.input(
+                "You are about to send a request for {} tokens (estimated)"
+                " using the generation model '{}'.\n\nEstimated cost:"
+                " ${:.2f}\n\nAre you sure you want to send this request?"
+                " [y/n] ".format(
+                    estimated_number_of_tokens,
+                    self.state["engine_id"],
+                    estimated_cost_in_usd,
+                )
+            )
+
+            if user_response.lower() != "y":
+
+                self.send_message_to_user("Request cancelled")
+                return prompt_text
+
+            # Otherwise send the request
             response = openai.Completion.create(
                 engine=self.state["engine_id"],
                 prompt=prompt_text,
