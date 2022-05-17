@@ -78,7 +78,7 @@ class TextGenPlugin(object):
     def _save_state_to_file(self):
         """Save the state to the state file."""
 
-        with open(STATE_FILE, "rw") as fp:
+        with open(STATE_FILE, "w") as fp:
 
             json.dump(self.state, fp)
 
@@ -87,7 +87,7 @@ class TextGenPlugin(object):
 
         try:
 
-            with open(STATE_FILE, "rw") as fp:
+            with open(STATE_FILE, "r") as fp:
 
                 self.state = json.load(fp)
 
