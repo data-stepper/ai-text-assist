@@ -26,10 +26,10 @@ import pexpect
 
 
 # Load the API key
-API_KEY = os.getenv("OPENAI_API_KEY")
+API_KEY: str = os.getenv("OPENAI_API_KEY")
 openai.api_key = API_KEY
 
-DATA_DIR = Path.home() / ".text_gen_plugin"
+DATA_DIR: Path = Path.home() / ".text_gen_plugin"
 DATA_DIR.mkdir(exist_ok=True)
 
 TEMPFILE = DATA_DIR / "tmpfile"
@@ -39,7 +39,7 @@ STATE_FILE = DATA_DIR / "statefile.json"
 logging.basicConfig(level=logging.DEBUG, filename=LOGFILE)
 
 
-model_ids = {
+model_ids: dict = {
     "1": "text-davinci-002",
     "2": "text-curie-001",
     "3": "text-babbage-001",
@@ -176,6 +176,8 @@ class TextGenPlugin(object):
                 "Error occurred sending api request: {}".format(ex)
             )
 
+            return prompt_text
+
     def _generate_text(self, source_text: str) -> str:
 
         # Ask the user first if he really wants to send the request
@@ -231,12 +233,12 @@ class TextGenPlugin(object):
         selected_text = self.extract_selected_text(r)
 
         # Emulate call to model for now
-        selected_text = self._generate_text(selected_text)
+        generated_text = self._generate_text(selected_text)
 
         # Prepared some text
         # Now paste it back in the buffer where it came from
 
-        self.insert_text_into_buffer(selected_text, r)
+        self.insert_text_into_buffer(generated_text, r)
 
     @neovim.command("TextGenRestart")
     def restart_plugin(self):
