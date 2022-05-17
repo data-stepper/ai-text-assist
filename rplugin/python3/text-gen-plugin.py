@@ -18,6 +18,7 @@ import os
 from os.path import expanduser
 from pprint import pformat
 import subprocess
+from pathlib import Path
 
 import neovim
 import openai
@@ -28,9 +29,13 @@ import pexpect
 API_KEY = os.getenv("OPENAI_API_KEY")
 openai.api_key = API_KEY
 
-TEMPFILE = "/tmp/text_gen_tmp"
-LOGFILE = "/log/text_generation.log"
-STATE_FILE = "/log/text_generation_plugin_state_file.json"
+DATA_DIR = Path.home() / ".text_gen_plugin"
+DATA_DIR.mkdir(exist_ok=True)
+
+TEMPFILE = DATA_DIR / "tmpfile"
+LOGFILE = DATA_DIR / "logfile.log"
+STATE_FILE = DATA_DIR / "statefile.json"
+
 logging.basicConfig(level=logging.DEBUG, filename=LOGFILE)
 
 
