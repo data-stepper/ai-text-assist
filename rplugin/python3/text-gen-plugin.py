@@ -75,6 +75,8 @@ class TextGenPlugin(object):
             "presence_penalty": 0.0,
         }
 
+        self._load_state_file()
+
     def _save_state_to_file(self):
         """Save the state to the state file."""
 
@@ -116,6 +118,8 @@ class TextGenPlugin(object):
 
             self.send_message_to_user("Error: could not find API key")
             return prompt_text
+
+        assert self.state is not None, "State was none, cannot send API request"
 
         try:
 
