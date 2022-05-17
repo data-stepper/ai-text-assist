@@ -97,7 +97,7 @@ class TextGenPlugin(object):
 
             # Create state file if it doesn't exist
             self.state = {
-                "total_tokens_requested": {name: 0 for model in model_ids.values()},
+                "total_tokens_requested": {name: 0 for name in model_ids.values()},
                 "max_tokens": 256,
                 "temperature": 0.0,
                 "engine_id": "code-cushman-001",
