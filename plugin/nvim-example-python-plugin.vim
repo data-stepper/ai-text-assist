@@ -4,5 +4,6 @@
 " delete this code and proceed without it.
 
 " Map C-g to generate text
-noremap <C-g> :TextGenGenerate<CR>
-vnoremap <C-g> :TextGenGenerate<CR>
+" Don't map anything by default
+" noremap <C-g> :TextGenGenerate<CR>
+" vnoremap <C-g> :TextGenGenerate<CR>

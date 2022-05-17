@@ -39,6 +39,8 @@ model_ids = {
     "2": "text-curie-001",
     "3": "text-babbage-001",
     "4": "text-ada-001",
+    "5": "code-davinci-002",  # And the codex models
+    "6": "code-cushman-001",
 }
 
 # Prepare a choices string here
@@ -53,6 +55,8 @@ models_pricing = {
     "text-curie-001": 0.006,
     "text-babbage-001": 0.0012,
     "text-ada-001": 0.0008,
+    "code-davinci-002": 0.06,  # Not sure whether these pricings are right
+    "code-cushman-001": 0.006,
 }
 
 
@@ -91,15 +95,10 @@ class TextGenPlugin(object):
 
             # Create state file if it doesn't exist
             self.state = {
-                "total_tokens_requested": {
-                    "text-davinci-002": 0,
-                    "text-curie-001": 0,
-                    "text-babbage-001": 0,
-                    "text-ada-001": 0,
-                },
+                "total_tokens_requested": {name: 0 for model in model_ids.values()},
                 "max_tokens": 256,
                 "temperature": 0.0,
-                "engine_id": "text-curie-001",
+                "engine_id": "code-cushman-001",
                 "total_spending_usd": 0.0,
             }
 
@@ -127,8 +126,7 @@ class TextGenPlugin(object):
             # According to OpenAI ~750 tokens make up 1000 words
             estimated_number_of_tokens = str.count(prompt_text, " ") / 750
             estimated_cost_in_usd = (
-                estimated_number_of_tokens
-                * models_pricing[self.state["engine_id"]]
+                estimated_number_of_tokens * models_pricing[self.state["engine_id"]]
             )
 
             user_response = self.nvim.input(
@@ -158,9 +156,7 @@ class TextGenPlugin(object):
 
             # Only return the text and write the raw response to the logfile
             logging.debug(
-                "Received response from OpenAI API: \n{}".format(
-                    pformat(response)
-                )
+                "Received response from OpenAI API: \n{}".format(pformat(response))
             )
 
             return response["choices"][0]["text"]
@@ -250,8 +246,9 @@ class TextGenPlugin(object):
 
         if not 0 < token_length <= 4096:
             self.send_message_to_user(
-                "Error: token length must be between 1 and 4096, given {}"
-                .format(token_length)
+                "Error: token length must be between 1 and 4096, given {}".format(
+                    token_length
+                )
             )
 
         else:
@@ -261,6 +258,7 @@ class TextGenPlugin(object):
 
     @neovim.command("TextGenChangeModel", nargs=1)
     def change_engine(self, token_length):
+        """Change the generation model engine."""
 
         self.send_message_to_user(
             "Changing text generation model to \n{}".format(models_choice_str)
@@ -283,8 +281,9 @@ class TextGenPlugin(object):
 
         if not 0 < token_length <= 4096:
             self.send_message_to_user(
-                "Error: token length must be between 1 and 4096, given {}"
-                .format(token_length)
+                "Error: token length must be between 1 and 4096, given {}".format(
+                    token_length
+                )
             )
 
         else:
