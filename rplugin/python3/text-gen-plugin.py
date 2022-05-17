@@ -133,26 +133,31 @@ class TextGenPlugin(object):
             # and calculate an expected price for the request
 
             # According to OpenAI ~750 tokens make up 1000 words
-            estimated_number_of_tokens = str.count(prompt_text, " ") / 750
-            estimated_cost_in_usd = (
+            estimated_number_of_tokens: float = 750 * (
+                str.count(prompt_text, " ") / 1000
+            )
+
+            estimated_cost_in_usd: float = (
                 estimated_number_of_tokens * models_pricing[self.state["engine_id"]]
             )
 
-            user_response = self.nvim.input(
+            log_message = (
                 "You are about to send a request for {} tokens (estimated)"
                 " using the generation model '{}'.\n\nEstimated cost:"
-                " ${:.2f}\n\nAre you sure you want to send this request?"
-                " [y/n] ".format(
-                    estimated_number_of_tokens,
-                    self.state["engine_id"],
-                    estimated_cost_in_usd,
-                )
+                " ${:.2f}\n\n"
+            ).format(
+                estimated_number_of_tokens,
+                self.state["engine_id"],
+                estimated_cost_in_usd,
             )
 
-            if user_response.lower() != "y":
+            self.send_message_to_user(log_message)
 
-                self.send_message_to_user("Request cancelled")
-                return prompt_text
+            # Cannot cancel request for now
+            # if user_response.lower() != "y":
+
+            #     self.send_message_to_user("Request cancelled")
+            #     return prompt_text
 
             # Otherwise send the request
             response = openai.Completion.create(
